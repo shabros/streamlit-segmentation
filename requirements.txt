@@ -1,0 +1,7 @@
+streamlit>0.66
+torch
+torchvision
+scikit-image
+pillow
+glob
+numpy
