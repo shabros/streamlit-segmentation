@@ -3,5 +3,4 @@ torch
 torchvision
 scikit-image
 pillow
-glob
 numpy
