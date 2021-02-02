@@ -6,6 +6,7 @@ import glob
 import random 
 from PIL import Image
 import skimage
+import skimage.io
 import torch
 from torchvision import transforms
 
@@ -13,15 +14,22 @@ model = torch.hub.load('pytorch/vision:v0.6.0', 'deeplabv3_resnet101', pretraine
 model = model.eval()
 
 
+# Model
+model_detection = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
+model_detection= model_detection.eval()
+
 # Streamlit encourages well-structured code, like starting execution in a main() function.
 def main():
 	# Render the readme as markdown using st.markdown.
 
 	img_url = st.text_input('Please enter the url of your photo', 'http://farm7.staticflickr.com/6065/6135516797_5409d7201d_z.jpg')
-	seg_button = st.button('Segment!')
-	selected_alpha = st.sidebar.slider("Select alpha", 0.1, 1.0, 0.1, 0.1)
+	button = st.button('Run!')
+	mode = st.sidebar.selectbox('Select your choice:', ["Detection","Segmentation"])
+	
+	threshold = st.sidebar.slider("Select value", 0.1, 1.0, 0.5, 0.1)
 
-	if seg_button:
+
+	if button:
 
 		#downlaod the image
 		img = skimage.io.imread(img_url)
@@ -29,15 +37,38 @@ def main():
 
 		# load image
 		_img = Image.fromarray(img)
-		st.image(_img)
-
-		#st.image(_img)
-		seg_result = segment(model, img)
+		st.image(_img) 
 		
-		blended = Image.blend(_img, seg_result, alpha=selected_alpha)
-		st.image(blended)
+		
+		
+		if mode == "Detection":
+			
+			model_detection.conf = threshold
+			det_result = detect(model_detection, img)
+			st.image(det_result)
+			
+		if mode == "Segmentation":
+		  
+			#st.image(_img)
+			seg_result = segment(model, img)
+			blended = Image.blend(_img, seg_result, alpha=threshold)
+			st.image(blended)
 
 
+			
+
+def detect(model, input_image):
+
+# 	#move the input and model to GPU for speed if available
+# 	if torch.cuda.is_available():
+# 		input_batch = input_batch.to('cuda')
+# 		model.to('cuda')
+
+	with torch.no_grad():
+		output = model([input_image])
+		output = output.render()
+		
+	return output[0]
 
 def segment(model, input_image):
 	preprocess = transforms.Compose([
